@@ -2,8 +2,8 @@
 #include "cpu/cpu_controller.h"
 #include <iostream>
 
-int main() {
-
+int main()
+{
     MemoryController mem(4);
     CPUController cpu(8, mem);
 

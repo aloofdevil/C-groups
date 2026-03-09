@@ -9,6 +9,8 @@ private:
     int active_requests;
     int max_requests;
 
+    int requestCount;
+
 public:
 
     Group(int id);
@@ -16,6 +18,8 @@ public:
     int serveRequest(int address);
 
     bool isUnderPressure();
+
+    int getRequestCount();
 };
 
 #endif
