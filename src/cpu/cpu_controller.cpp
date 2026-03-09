@@ -1,23 +1,55 @@
 #include "cpu_controller.h"
+#include <iostream>
+#include <thread>
+#include <chrono>
 
 CPUController::CPUController(int numCores, MemoryController &mem)
     : memory(mem)
 {
-    for (int i = 0; i < numCores; i++) {
+    for(int i = 0; i < numCores; i++)
         cores.push_back(Core(i));
+}
+
+void CPUController::simulateNormal()
+{
+    for(auto &core : cores)
+    {
+        int address = core.generateAddress();
+        memory.handleRequest(address);
     }
 }
 
-void CPUController::simulateCGroupConstruction() {
+void CPUController::simulateV1()
+{
+    std::cout << "Running Cgroups V1 Simulation\n";
 
-    // Map cores evenly to 4 groups
-    for (int i = 0; i < cores.size(); i++) {
+    for(int i = 0; i < 5; i++)
+    {
+        for(auto &core : cores)
+        {
+            int address = core.generateAddress();
+            memory.handleRequest(address);
+        }
+    }
+}
 
-        int group_id = i % 4;   // distribute cores across groups
-        int row = i;            // unique row per core
+void CPUController::simulateV2()
+{
+    std::cout << "Running Cgroups V2 Simulation\n";
 
-        int address = cores[i].generateAddress(group_id, row);
+    for(int i = 0; i < 5; i++)
+    {
+        for(auto &core : cores)
+        {
+            if(memory.memoryPressure())
+            {
+                std::cout << "CPU throttled due to memory pressure\n";
+                std::this_thread::sleep_for(std::chrono::milliseconds(50));
+                continue;
+            }
 
-        memory.handleRequest(address);
+            int address = core.generateAddress();
+            memory.handleRequest(address);
+        }
     }
 }

@@ -5,13 +5,18 @@
 #include <vector>
 
 class MemoryController {
+
 private:
+
     std::vector<Group> groups;
-    int currentCycle;
 
 public:
+
     MemoryController(int numGroups);
-    void handleRequest(int address);
+
+    int handleRequest(int address);
+
+    bool memoryPressure();
 };
 
 #endif

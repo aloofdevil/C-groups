@@ -1,21 +1,27 @@
 #include "memory_controller.h"
-#include <iostream>
 
 MemoryController::MemoryController(int numGroups) {
-    groups = std::vector<Group>(numGroups);
-    currentCycle = 0;
+
+    for(int i = 0; i < numGroups; i++) {
+
+        groups.push_back(Group(i));
+    }
 }
 
-void MemoryController::handleRequest(int address) {
+int MemoryController::handleRequest(int address) {
 
-    int group_id = (address >> 22) & 0x3;
-    int row = (address >> 12) & 0x3FF;
+    int group_id = address % groups.size();
 
-    int latency = groups[group_id].processRequest(row, currentCycle);
+    return groups[group_id].serveRequest(address);
+}
 
-    std::cout << "Group " << group_id
-              << " served request with latency "
-              << latency << std::endl;
+bool MemoryController::memoryPressure() {
 
-    currentCycle++;
+    for(auto &g : groups) {
+
+        if(g.isUnderPressure())
+            return true;
+    }
+
+    return false;
 }

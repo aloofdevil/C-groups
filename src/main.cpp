@@ -1,13 +1,20 @@
 #include "memory/memory_controller.h"
 #include "cpu/cpu_controller.h"
-
+#include <iostream>
 
 int main() {
 
-    MemoryController mem(4);    // 4 C-groups
-    CPUController cpu(8, mem);  // 8 cores
+    MemoryController mem(4);
+    CPUController cpu(8, mem);
 
-    cpu.simulateCGroupConstruction();
+    std::cout << "\n===== NORMAL CPU-MEMORY SIMULATION =====\n";
+    cpu.simulateNormal();
+
+    std::cout << "\n===== CGROUP V1 SIMULATION =====\n";
+    cpu.simulateV1();
+
+    std::cout << "\n===== CGROUP V2 SIMULATION =====\n";
+    cpu.simulateV2();
 
     return 0;
 }

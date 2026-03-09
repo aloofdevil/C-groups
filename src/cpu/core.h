@@ -2,12 +2,14 @@
 #define CORE_H
 
 class Core {
+
 private:
-    int coreID;
+    int id;
 
 public:
     Core(int id);
-    int generateAddress(int group_id, int row);
+
+    int generateAddress();
 };
 
 #endif

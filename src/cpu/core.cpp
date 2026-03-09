@@ -1,18 +1,13 @@
 #include "core.h"
+#include <cstdlib>
 
 Core::Core(int id) {
-    coreID = id;
+    this->id = id;
 }
 
-int Core::generateAddress(int group_id, int row) {
+int Core::generateAddress() {
 
-    int address = 0;
-
-    // group bits at [23:22]
-    address |= (group_id << 22);
-
-    // row bits at [21:12]
-    address |= (row << 12);
+    int address = rand() % 1024;
 
     return address;
 }

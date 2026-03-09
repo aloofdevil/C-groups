@@ -2,14 +2,20 @@
 #define GROUP_H
 
 class Group {
+
 private:
-    int open_row;
-    bool row_open;
-    int availableCycle;
+
+    int id;
+    int active_requests;
+    int max_requests;
 
 public:
-    Group();
-    int processRequest(int row, int currentCycle);
+
+    Group(int id);
+
+    int serveRequest(int address);
+
+    bool isUnderPressure();
 };
 
 #endif

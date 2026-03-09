@@ -1,26 +1,34 @@
 #include "group.h"
-#include <algorithm>
+#include <iostream>
 
-Group::Group() {
-    open_row = -1;
-    row_open = false;
-    availableCycle = 0;
+Group::Group(int id) {
+
+    this->id = id;
+    active_requests = 0;
+    max_requests = 5;
 }
 
-int Group::processRequest(int row, int currentCycle) {
+int Group::serveRequest(int address) {
 
-    int startCycle = std::max(currentCycle, availableCycle);
-    int latency;
+    active_requests++;
 
-    if (row_open && open_row == row) {
-        latency = 5;     // row hit
-    } else {
-        latency = 15;    // row miss
-        open_row = row;
-        row_open = true;
-    }
+    int latency = 10 + active_requests;
 
-    availableCycle = startCycle + latency;
+    std::cout << "Group "
+              << id
+              << " served request with latency "
+              << latency
+              << std::endl;
 
-    return availableCycle - currentCycle;
+    active_requests--;
+
+    return latency;
+}
+
+bool Group::isUnderPressure() {
+
+    if(active_requests >= max_requests)
+        return true;
+
+    return false;
 }
