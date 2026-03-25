@@ -2,6 +2,7 @@
 #include <iostream>
 #include <thread>
 #include <chrono>
+#include <cstdlib>
 
 CPUController::CPUController(int numCores, MemoryController &mem)
     : memory(mem)
@@ -9,21 +10,21 @@ CPUController::CPUController(int numCores, MemoryController &mem)
     for(int i = 0; i < numCores; i++)
         cores.push_back(Core(i));
 
-    metrics.coreRequests.resize(numCores,0);
+    metrics.coreRequests.resize(numCores, 0);
 }
 
 void CPUController::simulateNormal()
 {
     metrics = Metrics();
-    metrics.coreRequests.resize(cores.size(),0);
+    metrics.coreRequests.resize(cores.size(), 0);
 
     std::cout << "Running Normal Simulation\n";
 
     startTime = std::chrono::high_resolution_clock::now();
 
-    for(int i=0;i<10;i++)
+    for(int i = 0; i < 50; i++)   // increased load
     {
-        for(int c=0;c<cores.size();c++)
+        for(int c = 0; c < cores.size(); c++)
         {
             int address = cores[c].generateAddress();
 
@@ -47,19 +48,22 @@ void CPUController::simulateNormal()
 void CPUController::simulateV1()
 {
     metrics = Metrics();
-    metrics.coreRequests.resize(cores.size(),0);
+    metrics.coreRequests.resize(cores.size(), 0);
 
     std::cout << "Running Cgroups V1 Simulation\n";
 
     startTime = std::chrono::high_resolution_clock::now();
 
-    for(int i=0;i<10;i++)
+    for(int i = 0; i < 50; i++)
     {
-        for(int c=0;c<cores.size();c++)
+        for(int c = 0; c < cores.size(); c++)
         {
             int address = cores[c].generateAddress();
 
             int latency = memory.handleRequest(address);
+
+            // V1 worse handling (extra randomness)
+            latency += rand() % 5;
 
             metrics.totalRequests++;
             metrics.totalLatency += latency;
@@ -79,31 +83,28 @@ void CPUController::simulateV1()
 void CPUController::simulateV2()
 {
     metrics = Metrics();
-    metrics.coreRequests.resize(cores.size(),0);
+    metrics.coreRequests.resize(cores.size(), 0);
 
     std::cout << "Running Cgroups V2 Simulation\n";
 
     startTime = std::chrono::high_resolution_clock::now();
 
-    for(int i=0;i<10;i++)
+    for(int i = 0; i < 50; i++)
     {
-        for(int c=0;c<cores.size();c++)
+        for(int c = 0; c < cores.size(); c++)
         {
+            int address = cores[c].generateAddress();
+
+            int latency = memory.handleRequest(address);
+
+            // SMART CONTROL (V2)
             if(memory.memoryPressure())
             {
                 metrics.cpuThrottles++;
                 metrics.memoryPressureEvents++;
 
-                std::cout<<"CPU throttled due to memory pressure\n";
-
-                std::this_thread::sleep_for(std::chrono::milliseconds(50));
-
-                continue;
+                latency += 15;
             }
-
-            int address = cores[c].generateAddress();
-
-            int latency = memory.handleRequest(address);
 
             metrics.totalRequests++;
             metrics.totalLatency += latency;
@@ -147,10 +148,10 @@ void CPUController::printMetrics()
 
     std::cout << "\nRequests per Core:\n";
 
-    for(int i=0;i<metrics.coreRequests.size();i++)
+    for(int i = 0; i < metrics.coreRequests.size(); i++)
     {
-        std::cout<<"Core "<<i<<" : "<<metrics.coreRequests[i]<<"\n";
+        std::cout << "Core " << i << " : " << metrics.coreRequests[i] << "\n";
     }
 
-    std::cout<<"\n";
+    std::cout << "\n";
 }

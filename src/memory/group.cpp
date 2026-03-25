@@ -1,5 +1,6 @@
 #include "group.h"
 #include <iostream>
+#include <cstdlib>
 
 Group::Group(int id)
 {
@@ -12,10 +13,20 @@ Group::Group(int id)
 int Group::serveRequest(int address)
 {
     active_requests++;
-
     requestCount++;
 
-    int latency = 10 + active_requests;
+    // 🔥 RANDOM + LOAD BASED LATENCY
+    int base = 5;
+    int noise = rand() % 10;              // randomness
+    int load = active_requests * 3;       // load impact
+
+    int latency = base + noise + load;
+
+    // 🔥 MEMORY PRESSURE PENALTY
+    if(active_requests > max_requests)
+    {
+        latency += 20;   // heavy delay
+    }
 
     std::cout<<"Group "<<id<<" served request with latency "<<latency<<"\n";
 
