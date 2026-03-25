@@ -1,156 +1,169 @@
-# C-Groups Memory Controller Simulator
+# CPU-Memory Cgroup Simulator
 
-## 📌 Project Overview
-
-This project simulates an 8-core CPU connected to a multi C-group memory controller.  
-The goal of the simulator is to model how memory requests are distributed across multiple memory groups and to observe request handling and latency behavior.
-
-The architecture separates CPU logic from memory logic in a modular and extendable design.
+A C++ simulation that models how a multi-core CPU interacts with memory under three different scheduling/resource-control regimes: **No cgroups (Normal)**, **Cgroups V1**, and **Cgroups V2**. It tracks latency, throughput, throttling, and per-core request distribution.
 
 ---
 
-## 🏗️ System Architecture
-
-The system consists of:
-
-- **CPUController**
-- **8 CPU Cores**
-- **MemoryController**
-- **4 Memory Groups (C-Groups)**
-
-### High-Level Structure
-
-
----
-
-## 🧠 Design Principles
-
-- Clear separation of CPU and memory subsystems
-- Modular file organization
-- Scalable architecture (can increase cores or memory groups easily)
-- Simple deterministic mapping for balanced request distribution
-- Clean simulation flow
+## 📁 Project Structure
+```
+project-root/
+│
+├── main.cpp                        # Entry point — runs all 3 simulations
+│
+├── cpu/
+│   ├── cpu_controller.h            # CPUController class + Metrics struct
+│   ├── cpu_controller.cpp          # Simulation logic (Normal, V1, V2) + metrics output
+│   ├── core.h                      # Core class declaration
+│   └── core.cpp                    # Core logic — random address generation
+│
+└── memory/
+    ├── memory_controller.h         # MemoryController class declaration
+    ├── memory_controller.cpp       # Routes requests to memory groups
+    ├── group.h                     # Group class declaration
+    └── group.cpp                   # Serves requests, tracks pressure & latency
+```
 
 ---
 
-## 📂 Project Structure
+## 🧩 Component Breakdown
 
+### `Core` (`cpu/core.h`, `cpu/core.cpp`)
+Represents a single CPU core. Each core generates a **random memory address** (0–1023) to simulate real memory access patterns.
 
-### Component Responsibilities
-
-### CPUController
-- Initializes multiple cores
-- Maps cores to memory groups
-- Sends memory requests to MemoryController
-
-### Core
-- Generates memory addresses
-- Simulates per-core memory activity
-
-### MemoryController
-- Manages multiple memory groups
-- Receives requests from CPUController
-- Delegates requests to appropriate memory group
-
-### Group
-- Simulates memory group behavior
-- Calculates request latency
-- Outputs request servicing information
+| Method | Description |
+|---|---|
+| `Core(int id)` | Constructs a core with a given ID |
+| `generateAddress()` | Returns a random address in range [0, 1023] |
 
 ---
 
-## 🔄 Address Mapping Logic
+### `Group` (`memory/group.h`, `memory/group.cpp`)
+Represents a **memory group** (analogous to a NUMA node or memory cgroup). Tracks active requests and computes latency.
 
-Memory requests are distributed evenly using modulo mapping:
-
-
-This ensures:
-- Load balancing across 4 groups
-- Deterministic routing
-- Scalable mapping logic
-
----
-
-
-This output confirms:
-- Correct group mapping
-- Proper request routing
-- Latency calculation functioning
-- CPU ↔ Memory integration working
+| Method | Description |
+|---|---|
+| `serveRequest(int address)` | Processes a request; latency = `10 + active_requests` |
+| `isUnderPressure()` | Returns `true` if `active_requests >= max_requests (5)` |
+| `getRequestCount()` | Returns total requests served by this group |
 
 ---
 
-## 🚀 Current Features
+### `MemoryController` (`memory/memory_controller.h`, `memory/memory_controller.cpp`)
+Owns multiple `Group` instances. Routes incoming memory requests to the correct group via address hashing.
 
-- Multi-core CPU simulation
-- Multi C-group memory controller
-- Modular object-oriented design
-- Deterministic request mapping
-- Extendable latency model
-- Clean build system using include paths
-
----
-
-## 🔬 Possible Extensions
-
-This project can be extended into a more advanced simulator by adding:
-
-- Row-buffer hit/miss modeling
-- DRAM timing parameters (tRCD, tCAS, tRP)
-- Request queue modeling
-- Memory contention simulation
-- Parallel core execution (multithreading)
-- Performance statistics tracking
-- Visualization of memory activity
-- Address interleaving strategies
-- NUMA-style memory modeling
+| Method | Description |
+|---|---|
+| `handleRequest(int address)` | Routes to `group[address % num_groups]` |
+| `memoryPressure()` | Returns `true` if **any** group is under pressure |
 
 ---
 
-## 📊 Educational Value
+### `CPUController` + `Metrics` (`cpu/cpu_controller.h`, `cpu/cpu_controller.cpp`)
+Drives the simulation. Owns all `Core` instances and holds a reference to `MemoryController`. Collects and prints detailed metrics after each run.
 
-This simulator demonstrates:
+#### `Metrics` struct fields
 
-- CPU–Memory interaction modeling
-- Memory interleaving techniques
-- Modular C++ system design
-- Multi-component simulation architecture
-- Basic performance modeling
+| Field | Description |
+|---|---|
+| `totalRequests` | Total memory requests issued |
+| `totalLatency` | Cumulative latency across all requests |
+| `minLatency` / `maxLatency` | Latency bounds |
+| `cpuThrottles` | Times CPU was throttled (V2 only) |
+| `memoryPressureEvents` | Memory pressure detections (V2 only) |
+| `coreRequests` | Per-core request count |
+| `throughput` | Requests per second |
 
-It is suitable for:
-- Computer Architecture coursework
-- Systems programming projects
-- Resume-level architecture projects
-- Simulation-based experimentation
+#### Simulation modes
 
----
-
-## 🛠️ Technologies Used
-
-- C++
-- Object-Oriented Programming
-- GCC / MinGW
-- Modular Header-Based Architecture
+| Method | Description |
+|---|---|
+| `simulateNormal()` | Baseline — no resource controls, all requests go through freely |
+| `simulateV1()` | Cgroups V1 — same flow as Normal (V1 tracks but doesn't throttle proactively) |
+| `simulateV2()` | Cgroups V2 — checks memory pressure **before** each request; throttles CPU with a 50ms sleep and skips the request if pressure is detected |
 
 ---
 
-## 📈 Future Direction
+## 🔄 How the Simulations Differ
 
-The project can evolve into:
+| Behaviour | Normal | Cgroups V1 | Cgroups V2 |
+|---|---|---|---|
+| Memory pressure check | ❌ | ❌ | ✅ (before each request) |
+| CPU throttling on pressure | ❌ | ❌ | ✅ (50ms sleep + skip) |
+| Latency tracking | ✅ | ✅ | ✅ |
+| Throttle/pressure metrics | ❌ | ❌ | ✅ |
+| Realistic cgroup behaviour | Baseline | Monitoring-only | Active back-pressure |
 
-- A full DRAM timing simulator
-- A research-grade memory interleaving simulator
-- A teaching tool for computer architecture
-- A performance benchmarking tool
-
----
-
-## 👤 Author
-
-Aloofdevil
+> **Note:** In this simulation, `isUnderPressure()` will rarely trigger since requests are served synchronously (active count resets immediately). To stress-test V2 throttling, increase `active_requests` concurrently or lower `max_requests` in `group.cpp`.
 
 ---
 
-## 📄 License
+## ⚙️ Build Instructions
 
-This project is for educational and simulation purposes.
+### Prerequisites
+- C++11 or later
+- `g++` or any standard C++ compiler
+
+### Compile
+```bash
+g++ -std=c++11 -o simulator \
+    main.cpp \
+    cpu/core.cpp \
+    cpu/cpu_controller.cpp \
+    memory/group.cpp \
+    memory/memory_controller.cpp
+```
+
+### Run
+```bash
+./simulator
+```
+
+---
+
+## 📊 Sample Output
+```
+===== NORMAL CPU-MEMORY SIMULATION =====
+Running Normal Simulation
+Group 0 served request with latency 11
+...
+===== METRICS =====
+Total Requests: 80
+Average Latency: 11
+Min Latency: 11
+Max Latency: 11
+Throughput (req/sec): 160000
+CPU Throttles: 0
+Memory Pressure Events: 0
+
+Requests per Core:
+Core 0 : 10
+Core 1 : 10
+...
+
+===== CGROUP V2 SIMULATION =====
+Running Cgroups V2 Simulation
+CPU throttled due to memory pressure     ← only appears under actual pressure
+...
+```
+
+---
+
+## 🔧 Configuration
+
+All key parameters are hardcoded and can be adjusted directly in source:
+
+| Parameter | Location | Default | Effect |
+|---|---|---|---|
+| Number of CPU cores | `main.cpp` | `8` | Cores issuing requests |
+| Number of memory groups | `main.cpp` | `4` | Memory partitions |
+| Simulation iterations | `cpu_controller.cpp` | `10` | Request loops per simulation |
+| Max requests per group | `group.cpp` | `5` | Pressure threshold |
+| Throttle sleep duration | `cpu_controller.cpp` | `50ms` | V2 backoff on pressure |
+
+---
+
+## 📌 Key Design Decisions
+
+- **Address-to-group mapping** uses modulo hashing (`address % num_groups`), distributing load evenly across groups.
+- **Latency model** is intentionally simple: `10 (base) + active_requests (contention penalty)`.
+- **V1 vs V2 distinction** reflects the real-world difference: cgroups V1 provides visibility but limited unified control; V2 enables proactive back-pressure via the unified hierarchy.
