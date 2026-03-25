@@ -3,6 +3,7 @@
 #include <thread>
 #include <chrono>
 #include <cstdlib>
+#include <fstream>
 
 CPUController::CPUController(int numCores, MemoryController &mem)
     : memory(mem)
@@ -13,22 +14,27 @@ CPUController::CPUController(int numCores, MemoryController &mem)
     metrics.coreRequests.resize(numCores, 0);
 }
 
+// ================= NORMAL =================
 void CPUController::simulateNormal()
 {
     metrics = Metrics();
     metrics.coreRequests.resize(cores.size(), 0);
 
+    std::ofstream logFile("normal_log.csv");
+    logFile << "request,core,latency,pressure\n";
+
     std::cout << "Running Normal Simulation\n";
 
     startTime = std::chrono::high_resolution_clock::now();
 
-    for(int i = 0; i < 50; i++)   // increased load
+    for(int i = 0; i < 50; i++)
     {
         for(int c = 0; c < cores.size(); c++)
         {
             int address = cores[c].generateAddress();
-
             int latency = memory.handleRequest(address);
+
+            int pressure = memory.memoryPressure() ? 1 : 0;
 
             metrics.totalRequests++;
             metrics.totalLatency += latency;
@@ -37,18 +43,30 @@ void CPUController::simulateNormal()
             metrics.maxLatency = std::max(metrics.maxLatency, latency);
 
             metrics.coreRequests[c]++;
+
+            // 🔥 LOGGING
+            logFile << metrics.totalRequests << ","
+                    << c << ","
+                    << latency << ","
+                    << pressure << "\n";
         }
     }
 
     endTime = std::chrono::high_resolution_clock::now();
 
+    logFile.close();
+
     printMetrics();
 }
 
+// ================= CGROUP V1 =================
 void CPUController::simulateV1()
 {
     metrics = Metrics();
     metrics.coreRequests.resize(cores.size(), 0);
+
+    std::ofstream logFile("v1_log.csv");
+    logFile << "request,core,latency,pressure\n";
 
     std::cout << "Running Cgroups V1 Simulation\n";
 
@@ -62,8 +80,10 @@ void CPUController::simulateV1()
 
             int latency = memory.handleRequest(address);
 
-            // V1 worse handling (extra randomness)
+            // V1 = slightly worse randomness
             latency += rand() % 5;
+
+            int pressure = memory.memoryPressure() ? 1 : 0;
 
             metrics.totalRequests++;
             metrics.totalLatency += latency;
@@ -72,18 +92,29 @@ void CPUController::simulateV1()
             metrics.maxLatency = std::max(metrics.maxLatency, latency);
 
             metrics.coreRequests[c]++;
+
+            logFile << metrics.totalRequests << ","
+                    << c << ","
+                    << latency << ","
+                    << pressure << "\n";
         }
     }
 
     endTime = std::chrono::high_resolution_clock::now();
 
+    logFile.close();
+
     printMetrics();
 }
 
+// ================= CGROUP V2 =================
 void CPUController::simulateV2()
 {
     metrics = Metrics();
     metrics.coreRequests.resize(cores.size(), 0);
+
+    std::ofstream logFile("v2_log.csv");
+    logFile << "request,core,latency,pressure\n";
 
     std::cout << "Running Cgroups V2 Simulation\n";
 
@@ -97,7 +128,7 @@ void CPUController::simulateV2()
 
             int latency = memory.handleRequest(address);
 
-            // SMART CONTROL (V2)
+            // V2 = smarter control
             if(memory.memoryPressure())
             {
                 metrics.cpuThrottles++;
@@ -106,6 +137,8 @@ void CPUController::simulateV2()
                 latency += 15;
             }
 
+            int pressure = memory.memoryPressure() ? 1 : 0;
+
             metrics.totalRequests++;
             metrics.totalLatency += latency;
 
@@ -113,14 +146,22 @@ void CPUController::simulateV2()
             metrics.maxLatency = std::max(metrics.maxLatency, latency);
 
             metrics.coreRequests[c]++;
+
+            logFile << metrics.totalRequests << ","
+                    << c << ","
+                    << latency << ","
+                    << pressure << "\n";
         }
     }
 
     endTime = std::chrono::high_resolution_clock::now();
 
+    logFile.close();
+
     printMetrics();
 }
 
+// ================= METRICS =================
 void CPUController::printMetrics()
 {
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
