@@ -40,6 +40,7 @@ public:
     void simulateNormal();
     void simulateV1();
     void simulateV2();
+    void simulateML();
 
     void printMetrics();
 };

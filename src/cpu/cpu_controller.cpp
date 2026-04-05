@@ -4,7 +4,10 @@
 #include <chrono>
 #include <cstdlib>
 #include <fstream>
+#include <algorithm>
+#include <climits>
 
+// ================= CONSTRUCTOR =================
 CPUController::CPUController(int numCores, MemoryController &mem)
     : memory(mem)
 {
@@ -31,17 +34,6 @@ void CPUController::simulateNormal()
     {
         for (int c = 0; c < cores.size(); c++)
         {
-            // 🔥 BURST TRAFFIC
-            if (rand() % 5 == 0)
-            {
-                for (int k = 0; k < 5; k++)
-                {
-                    int tempAddr = cores[c].generateAddress();
-                    memory.handleRequest(tempAddr);
-                }
-            }
-
-            // NORMAL REQUEST
             int address = cores[c].generateAddress();
             int latency = memory.handleRequest(address);
 
@@ -85,21 +77,9 @@ void CPUController::simulateV1()
     {
         for (int c = 0; c < cores.size(); c++)
         {
-            // 🔥 BURST TRAFFIC
-            if (rand() % 5 == 0)
-            {
-                for (int k = 0; k < 5; k++)
-                {
-                    int tempAddr = cores[c].generateAddress();
-                    memory.handleRequest(tempAddr);
-                }
-            }
-
-            // NORMAL REQUEST
             int address = cores[c].generateAddress();
             int latency = memory.handleRequest(address);
 
-            // V1 = slightly worse randomness
             latency += rand() % 10;
 
             int pressure = memory.memoryPressure() ? 1 : 0;
@@ -142,30 +122,17 @@ void CPUController::simulateV2()
     {
         for (int c = 0; c < cores.size(); c++)
         {
-            // 🔥 BURST TRAFFIC
-            if (rand() % 5 == 0)
-            {
-                for (int k = 0; k < 5; k++)
-                {
-                    int tempAddr = cores[c].generateAddress();
-                    memory.handleRequest(tempAddr);
-                }
-            }
-
-            // NORMAL REQUEST
             int address = cores[c].generateAddress();
             int latency = memory.handleRequest(address);
 
-            // V2 = smarter control
-            if (memory.memoryPressure())
+            int pressure = memory.memoryPressure() ? 1 : 0;
+
+            if (pressure)
             {
                 metrics.cpuThrottles++;
                 metrics.memoryPressureEvents++;
-
                 latency += 5;
             }
-
-            int pressure = memory.memoryPressure() ? 1 : 0;
 
             metrics.totalRequests++;
             metrics.totalLatency += latency;
@@ -179,6 +146,79 @@ void CPUController::simulateV2()
                     << c << ","
                     << latency << ","
                     << pressure << "\n";
+        }
+    }
+
+    endTime = std::chrono::high_resolution_clock::now();
+
+    logFile.close();
+    printMetrics();
+}
+
+// ================= ML SIMULATION =================
+void CPUController::simulateML()
+{
+    metrics = Metrics();
+    metrics.coreRequests.resize(cores.size(), 0);
+
+    std::ofstream logFile("ml_log.csv");
+    logFile << "request,core,latency,predicted_pressure\n";
+
+    std::cout << "Running ML Simulation\n";
+
+    startTime = std::chrono::high_resolution_clock::now();
+
+    for (int i = 0; i < 50; i++)
+    {
+        for (int c = 0; c < cores.size(); c++)
+        {
+            int address = cores[c].generateAddress();
+            int latency = memory.handleRequest(address);
+
+            // 🔥 CALL PYTHON MODEL
+            std::string command = "python predict.py " + std::to_string(latency);
+
+            FILE* pipe = _popen(command.c_str(), "r");
+
+            char buffer[128];
+            std::string result = "";
+
+            while (fgets(buffer, sizeof(buffer), pipe) != NULL)
+            {
+                result += buffer;
+            }
+
+            _pclose(pipe);
+
+            int predicted_pressure = 0;
+            try
+            {
+                predicted_pressure = std::stoi(result);
+            }
+            catch (...)
+            {
+                predicted_pressure = 0;
+            }
+
+            // 🔥 PROACTIVE CONTROL
+            if (predicted_pressure == 1)
+            {
+                metrics.cpuThrottles++;
+                latency += 3;
+            }
+
+            metrics.totalRequests++;
+            metrics.totalLatency += latency;
+
+            metrics.minLatency = std::min(metrics.minLatency, latency);
+            metrics.maxLatency = std::max(metrics.maxLatency, latency);
+
+            metrics.coreRequests[c]++;
+
+            logFile << metrics.totalRequests << ","
+                    << c << ","
+                    << latency << ","
+                    << predicted_pressure << "\n";
         }
     }
 
@@ -205,11 +245,13 @@ void CPUController::printMetrics()
 
     std::cout << "Total Requests: " << metrics.totalRequests << "\n";
 
-    std::cout << "Average Latency: "
-              << metrics.totalLatency / metrics.totalRequests << "\n";
+    if (metrics.totalRequests > 0)
+    {
+        std::cout << "Average Latency: "
+                  << metrics.totalLatency / metrics.totalRequests << "\n";
+    }
 
     std::cout << "Min Latency: " << metrics.minLatency << "\n";
-
     std::cout << "Max Latency: " << metrics.maxLatency << "\n";
 
     std::cout << "Throughput (req/sec): " << metrics.throughput << "\n";

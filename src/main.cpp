@@ -7,14 +7,13 @@
 
 int main()
 {
-    // 🔥 IMPORTANT: seed random generator
+    // Seed random generator
     srand(time(0));
 
     std::cout << "===== NORMAL CPU-MEMORY SIMULATION =====\n";
 
-    MemoryController mem1(4);     // 4 memory groups
-    CPUController cpu1(8, mem1);  // 8 CPU cores
-
+    MemoryController mem1(4);
+    CPUController cpu1(8, mem1);
     cpu1.simulateNormal();
 
 
@@ -22,7 +21,6 @@ int main()
 
     MemoryController mem2(4);
     CPUController cpu2(8, mem2);
-
     cpu2.simulateV1();
 
 
@@ -30,8 +28,14 @@ int main()
 
     MemoryController mem3(4);
     CPUController cpu3(8, mem3);
-
     cpu3.simulateV2();
+
+
+    std::cout << "\n===== ML-BASED SIMULATION =====\n";
+
+    MemoryController mem4(4);
+    CPUController cpu4(8, mem4);
+    cpu4.simulateML();   // ✅ NEW FUNCTION
 
     return 0;
 }
