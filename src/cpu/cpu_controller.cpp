@@ -8,7 +8,7 @@
 CPUController::CPUController(int numCores, MemoryController &mem)
     : memory(mem)
 {
-    for(int i = 0; i < numCores; i++)
+    for (int i = 0; i < numCores; i++)
         cores.push_back(Core(i));
 
     metrics.coreRequests.resize(numCores, 0);
@@ -27,10 +27,21 @@ void CPUController::simulateNormal()
 
     startTime = std::chrono::high_resolution_clock::now();
 
-    for(int i = 0; i < 50; i++)
+    for (int i = 0; i < 50; i++)
     {
-        for(int c = 0; c < cores.size(); c++)
+        for (int c = 0; c < cores.size(); c++)
         {
+            // 🔥 BURST TRAFFIC
+            if (rand() % 5 == 0)
+            {
+                for (int k = 0; k < 5; k++)
+                {
+                    int tempAddr = cores[c].generateAddress();
+                    memory.handleRequest(tempAddr);
+                }
+            }
+
+            // NORMAL REQUEST
             int address = cores[c].generateAddress();
             int latency = memory.handleRequest(address);
 
@@ -44,7 +55,6 @@ void CPUController::simulateNormal()
 
             metrics.coreRequests[c]++;
 
-            // 🔥 LOGGING
             logFile << metrics.totalRequests << ","
                     << c << ","
                     << latency << ","
@@ -55,7 +65,6 @@ void CPUController::simulateNormal()
     endTime = std::chrono::high_resolution_clock::now();
 
     logFile.close();
-
     printMetrics();
 }
 
@@ -72,16 +81,26 @@ void CPUController::simulateV1()
 
     startTime = std::chrono::high_resolution_clock::now();
 
-    for(int i = 0; i < 50; i++)
+    for (int i = 0; i < 50; i++)
     {
-        for(int c = 0; c < cores.size(); c++)
+        for (int c = 0; c < cores.size(); c++)
         {
-            int address = cores[c].generateAddress();
+            // 🔥 BURST TRAFFIC
+            if (rand() % 5 == 0)
+            {
+                for (int k = 0; k < 5; k++)
+                {
+                    int tempAddr = cores[c].generateAddress();
+                    memory.handleRequest(tempAddr);
+                }
+            }
 
+            // NORMAL REQUEST
+            int address = cores[c].generateAddress();
             int latency = memory.handleRequest(address);
 
             // V1 = slightly worse randomness
-            latency += rand() % 5;
+            latency += rand() % 10;
 
             int pressure = memory.memoryPressure() ? 1 : 0;
 
@@ -103,7 +122,6 @@ void CPUController::simulateV1()
     endTime = std::chrono::high_resolution_clock::now();
 
     logFile.close();
-
     printMetrics();
 }
 
@@ -120,21 +138,31 @@ void CPUController::simulateV2()
 
     startTime = std::chrono::high_resolution_clock::now();
 
-    for(int i = 0; i < 50; i++)
+    for (int i = 0; i < 50; i++)
     {
-        for(int c = 0; c < cores.size(); c++)
+        for (int c = 0; c < cores.size(); c++)
         {
-            int address = cores[c].generateAddress();
+            // 🔥 BURST TRAFFIC
+            if (rand() % 5 == 0)
+            {
+                for (int k = 0; k < 5; k++)
+                {
+                    int tempAddr = cores[c].generateAddress();
+                    memory.handleRequest(tempAddr);
+                }
+            }
 
+            // NORMAL REQUEST
+            int address = cores[c].generateAddress();
             int latency = memory.handleRequest(address);
 
             // V2 = smarter control
-            if(memory.memoryPressure())
+            if (memory.memoryPressure())
             {
                 metrics.cpuThrottles++;
                 metrics.memoryPressureEvents++;
 
-                latency += 15;
+                latency += 5;
             }
 
             int pressure = memory.memoryPressure() ? 1 : 0;
@@ -157,18 +185,21 @@ void CPUController::simulateV2()
     endTime = std::chrono::high_resolution_clock::now();
 
     logFile.close();
-
     printMetrics();
 }
 
 // ================= METRICS =================
 void CPUController::printMetrics()
 {
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
+                        endTime - startTime)
+                        .count();
 
-    if(duration == 0) duration = 1;
+    if (duration == 0)
+        duration = 1;
 
-    metrics.throughput = (double)metrics.totalRequests / duration * 1000;
+    metrics.throughput =
+        (double)metrics.totalRequests / duration * 1000;
 
     std::cout << "\n===== METRICS =====\n";
 
@@ -185,13 +216,15 @@ void CPUController::printMetrics()
 
     std::cout << "CPU Throttles: " << metrics.cpuThrottles << "\n";
 
-    std::cout << "Memory Pressure Events: " << metrics.memoryPressureEvents << "\n";
+    std::cout << "Memory Pressure Events: "
+              << metrics.memoryPressureEvents << "\n";
 
     std::cout << "\nRequests per Core:\n";
 
-    for(int i = 0; i < metrics.coreRequests.size(); i++)
+    for (int i = 0; i < metrics.coreRequests.size(); i++)
     {
-        std::cout << "Core " << i << " : " << metrics.coreRequests[i] << "\n";
+        std::cout << "Core " << i << " : "
+                  << metrics.coreRequests[i] << "\n";
     }
 
     std::cout << "\n";

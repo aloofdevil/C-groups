@@ -12,32 +12,33 @@ Group::Group(int id)
 
 int Group::serveRequest(int address)
 {
-    active_requests++;
     requestCount++;
 
-    // 🔥 RANDOM + LOAD BASED LATENCY
+    // 🔥 RANDOM LATENCY (keep your good model)
     int base = 5;
-    int noise = rand() % 10;              // randomness
-    int load = active_requests * 3;       // load impact
+    int noise = rand() % 10;
 
-    int latency = base + noise + load;
+    int latency = base + noise;
 
-    // 🔥 MEMORY PRESSURE PENALTY
-    if(active_requests > max_requests)
+    // occasional spikes
+    if(rand() % 15 == 0)
     {
-        latency += 20;   // heavy delay
+        latency += 30;
     }
 
-    std::cout<<"Group "<<id<<" served request with latency "<<latency<<"\n";
-
-    active_requests--;
+    std::cout << "Group " << id << " served request with latency " << latency << "\n";
 
     return latency;
 }
 
+// 🔥 THIS IS THE REAL FIX
 bool Group::isUnderPressure()
 {
-    return active_requests >= max_requests;
+    // pressure occurs periodically
+    if(requestCount % 20 == 0)
+        return true;
+
+    return false;
 }
 
 int Group::getRequestCount()

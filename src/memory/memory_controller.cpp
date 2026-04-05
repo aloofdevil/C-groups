@@ -9,7 +9,7 @@ MemoryController::MemoryController(int numGroups)
 
 int MemoryController::handleRequest(int address)
 {
-    // NON-UNIFORM DISTRIBUTION
+    // 🔥 NON-UNIFORM WORKLOAD
     int r = rand() % 100;
 
     int group_id;
