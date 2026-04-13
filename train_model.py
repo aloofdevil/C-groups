@@ -29,5 +29,11 @@ print("Accuracy:", accuracy_score(y_test, y_pred))
 print(classification_report(y_test, y_pred))
 
 # 🔥 Save model
+import os
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+model_path = os.path.join(BASE_DIR, "model.pkl")
+
+model = joblib.load(model_path)
 joblib.dump(model, "model.pkl")
 print("Model saved as model.pkl")
